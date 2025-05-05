@@ -1,8 +1,27 @@
 const Task = require("../models/task");
+const User = require("../models/user");
 
 const createTask = async (req, res) =>{
   try {
-    const task = new Task({ ...req.body, createdBy: req.user.id });
+
+    const { title, description, dueDate, priority, status, assignedTo } = req.body;
+
+    if (assignedTo) {
+      const assignedUser = await User.findById(assignedTo);
+      if (!assignedUser) {
+        return res.status(404).json({ message: 'Assigned user not found' });
+      }
+    }
+
+    const task = new Task({
+      title,
+      description,
+      dueDate,
+      priority,
+      status,
+      createdBy: req.user.id,
+      assignedTo,
+    });
     await task.save();
     res.status(201).json(task);
   } catch (err) {

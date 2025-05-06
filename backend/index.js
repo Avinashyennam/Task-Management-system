@@ -1,8 +1,10 @@
 const mongoose = require('mongoose');
 const express = require('express');
 const app = express();
+require('dotenv').config();
 const mongouri = process.env.MONGO_URI;
-const port = process.env.PORT || 5000;
+// console.log(mongouri);
+const port = process.env.PORT;
 const userRoutes = require("./routes/users");
 const taskRoutes = require("./routes/tasks");
 mongoose.connect(mongouri)
@@ -14,6 +16,9 @@ mongoose.connect(mongouri)
 }) 
 
 app.use(express.json());
+app.get("/", (req, res)=>{
+  res.send("hello");
+})
 app.use('/api/auth', userRoutes);
 app.use('/api/tasks', taskRoutes);
 

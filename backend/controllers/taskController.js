@@ -5,7 +5,7 @@ const createTask = async (req, res) =>{
   try {
 
     const { title, description, dueDate, priority, status, assignedTo } = req.body;
-
+    console.log(req.body);
     if (assignedTo) {
       const assignedUser = await User.findById(assignedTo);
       if (!assignedUser) {
@@ -13,15 +13,20 @@ const createTask = async (req, res) =>{
       }
     }
 
-    const task = new Task({
+    const taskData = {
       title,
       description,
       dueDate,
       priority,
       status,
       createdBy: req.user.id,
-      assignedTo,
-    });
+    };
+
+    if(assignedTo && assignedTo.trim() !== ''){
+      taskData.assignedTo = assignedTo;
+    }
+
+    const task = new Task(taskData);
     await task.save();
     res.status(201).json(task);
   } catch (err) {

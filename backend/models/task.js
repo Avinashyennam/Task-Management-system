@@ -9,9 +9,9 @@ const taskSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  due_date: {
+  dueDate: {
     type: Date,
-  
+    required: true
   },
   priority: {
     type: String,

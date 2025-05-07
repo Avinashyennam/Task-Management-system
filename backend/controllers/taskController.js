@@ -1,17 +1,20 @@
 const Task = require("../models/task");
 const User = require("../models/user");
 
-const createTask = async (req, res) =>{
+const createTask = async (req, res) => {
   try {
 
+    let assignedUserId = null;
     const { title, description, dueDate, priority, status, assignedTo } = req.body;
     console.log(req.body);
     if (assignedTo) {
-      const assignedUser = await User.findById(assignedTo);
+      const assignedUser = await User.findOne({ email: assignedTo });
       if (!assignedUser) {
         return res.status(404).json({ message: 'Assigned user not found' });
       }
+      assignedUserId = assignedUser._id;
     }
+    console.log("assigned id is", assignedUserId)
 
     const taskData = {
       title,
@@ -22,8 +25,8 @@ const createTask = async (req, res) =>{
       createdBy: req.user.id,
     };
 
-    if(assignedTo && assignedTo.trim() !== ''){
-      taskData.assignedTo = assignedTo;
+    if (assignedUserId) {
+      taskData.assignedTo = assignedUserId;
     }
 
     const task = new Task(taskData);
@@ -34,9 +37,9 @@ const createTask = async (req, res) =>{
   }
 }
 
-const getTasks = async (req, res)=>{
+const getTasks = async (req, res) => {
   try {
-    const tasks = await Task.find({ 
+    const tasks = await Task.find({
       $or: [{ createdBy: req.user.id }, { assignedTo: req.user.id }]
     });
     res.json(tasks);
@@ -79,4 +82,4 @@ const deleteTask = async (req, res) => {
   }
 };
 
-module.exports = {createTask, getTasks, getTask, updateTask, deleteTask}
+module.exports = { createTask, getTasks, getTask, updateTask, deleteTask }

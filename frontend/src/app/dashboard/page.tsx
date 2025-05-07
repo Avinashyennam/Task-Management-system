@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Pencil, Trash2 } from 'lucide-react';
-
+import { motion } from "framer-motion";
+import TaskCard from '../components/Taskcard';
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token');
   return {
@@ -25,33 +25,42 @@ export default function Dashboard() {
   });
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<any>({});
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterPriority, setFilterPriority] = useState('');
+  const [filterDueDate, setFilterDueDate] = useState('');
+
   const router = useRouter();
 
+  const fetchTasks = async () => {
+    try {
+      const headers = getAuthHeaders();
+
+      const [assignedRes, createdRes, overdueRes] = await Promise.all([
+        fetch('http://localhost:5000/api/auth/assigned', { headers }),
+        fetch('http://localhost:5000/api/auth/created', { headers }),
+        fetch('http://localhost:5000/api/auth/overdue', { headers }),
+      ]);
+
+      const [assignedData, createdData, overdueData] = await Promise.all([
+        assignedRes.json(),
+        createdRes.json(),
+        overdueRes.json()
+      ])
+
+      setAssignedTasks(assignedData.tasks || []);
+      setCreatedTasks(createdData.tasks || []);
+      setOverdueTasks(overdueData.tasks || []);
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+    }
+  };
+
   useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        const headers = getAuthHeaders();
-
-        const [assignedRes, createdRes, overdueRes] = await Promise.all([
-          fetch('http://localhost:5000/api/auth/assigned', { headers }),
-          fetch('http://localhost:5000/api/auth/created', { headers }),
-          fetch('http://localhost:5000/api/auth/overdue', { headers }),
-        ]);
-
-        const [assignedData, createdData, overdueData] = await Promise.all([
-          assignedRes.json(),
-          createdRes.json(),
-          overdueRes.json()
-        ])
-
-        setAssignedTasks(assignedData.tasks || []);
-        setCreatedTasks(createdData.tasks || []);
-        setOverdueTasks(overdueData.tasks || []);
-      } catch (error) {
-        console.error('Error fetching tasks:', error);
-      }
-    };
-
+    const token = localStorage.getItem("token");
+    if (!token || token === '') {
+      router.push("/login");
+    }
     fetchTasks();
   }, []);
 
@@ -81,7 +90,7 @@ export default function Dashboard() {
           status: 'Todo',
           assignedTo: '',
         });
-        // fetchAssignedTasks();
+        fetchTasks();
       } else {
         alert('Failed to create task');
       }
@@ -102,7 +111,7 @@ export default function Dashboard() {
 
       if (res.ok) {
         alert('Task deleted');
-        // fetchAssignedTasks(); // refresh
+        fetchTasks();
       } else {
         alert('Failed to delete');
       }
@@ -127,7 +136,7 @@ export default function Dashboard() {
       if (res.ok) {
         alert('Task updated');
         setEditingTaskId(null);
-        // fetchAssignedTasks();
+        fetchTasks();
       } else {
         alert('Update failed');
       }
@@ -140,238 +149,202 @@ export default function Dashboard() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const filterTasks = (tasks: any[]) => {
+    return tasks.filter(task => {
+      const matchesSearch =
+        task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        task.description.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesStatus = filterStatus ? task.status === filterStatus : true;
+      const matchesPriority = filterPriority ? task.priority === filterPriority : true;
+      const matchesDueDate = filterDueDate ? new Date(task.dueDate) <= new Date(filterDueDate) : true;
+
+      return matchesSearch && matchesStatus && matchesPriority && matchesDueDate;
+    });
+  };
+
+  const filteredAssigned = filterTasks(assignedTasks);
+  const filteredCreated = filterTasks(createdTasks);
+  const filteredOverdue = filterTasks(overdueTasks);
+
+
   return (
-    <div className="flex min-h-screen">
-      {/* Task List Panel */}
-      <div className="w-1/2 p-6 bg-gray-50 overflow-y-auto text-gray-700">
-        <div>
-          <h2 className="text-xl font-bold mb-4">assigned tasks</h2>
-          {assignedTasks.map((task: any) => (
-            <div key={task._id} className="bg-white p-4 rounded shadow mb-3">
-              <h3 className="text-lg font-semibold">{task.title}</h3>
-              <p>{task.description}</p>
-              <p className="text-sm text-gray-600">Due: {task.dueDate?.split('T')[0]}</p>
-              <p className="text-sm">Priority: {task.priority}</p>
-              <p className="text-sm">Status: {task.status}</p>
-              <button onClick={() => {
-                setEditingTaskId(task._id);
-                setEditForm(task);
-              }}>
-                <Pencil size={18} className="text-blue-600 hover:text-blue-800" />
-              </button>
-              <button onClick={() => handleDelete(task._id)}>
-                <Trash2 size={18} className="text-red-600 hover:text-red-800" />
-              </button>
-
-              {/* {editingTaskId === task._id ? (
-                <form onSubmit={(e) => handleEditSubmit(e, task._id)} className="space-y-2">
-                  <input name="title" value={editForm.title} onChange={handleEditChange} className="w-full border px-2 py-1 rounded" />
-                  <textarea name="description" value={editForm.description} onChange={handleEditChange} className="w-full border px-2 py-1 rounded" />
-                  <input type="date" name="dueDate" value={editForm.dueDate?.split('T')[0]} onChange={handleEditChange} className="w-full border px-2 py-1 rounded" />
-                  <select name="priority" value={editForm.priority} onChange={handleEditChange} className="w-full border px-2 py-1 rounded">
-                    <option>Low</option><option>Medium</option><option>High</option>
-                  </select>
-                  <select name="status" value={editForm.status} onChange={handleEditChange} className="w-full border px-2 py-1 rounded">
-                    <option>Pending</option><option>In Progress</option><option>Completed</option>
-                  </select>
-                  <div className="flex gap-2">
-                    <button type="submit" className="bg-green-600 text-white px-3 py-1 rounded">Save</button>
-                    <button type="button" className="bg-gray-400 text-white px-3 py-1 rounded" onClick={() => setEditingTaskId(null)}>Cancel</button>
-                  </div>
-                </form>
-              ) : (
-                <>
-                  <h3 className="text-lg font-semibold">{task.title}</h3>
-                  <p>{task.description}</p>
-                  <p className="text-sm text-gray-600">Due: {task.dueDate?.split('T')[0]}</p>
-                  <p className="text-sm">Priority: {task.priority}</p>
-                  <p className="text-sm">Status: {task.status}</p>
-
-                  <div className="absolute top-2 right-2 flex gap-2">
-                    <button onClick={() => {
-                      setEditingTaskId(task._id);
-                      setEditForm(task);
-                    }}>
-                      <Pencil size={18} className="text-blue-600 hover:text-blue-800" />
-                    </button>
-                    <button onClick={() => handleDelete(task._id)}>
-                      <Trash2 size={18} className="text-red-600 hover:text-red-800" />
-                    </button>
-                  </div>
-                </>
-              )} */}
-
-            </div>
-          ))}
-        </div>
-        <div>
-          <h2 className="text-xl font-bold mb-4">created tasks</h2>
-          {createdTasks.map((task: any) => (
-            <div key={task._id} className="bg-white p-4 rounded shadow mb-3">
-              {/* <h3 className="text-lg font-semibold">{task.title}</h3>
-              <p>{task.description}</p>
-              <p className="text-sm text-gray-600">Due: {task.dueDate?.split('T')[0]}</p>
-              <p className="text-sm">Priority: {task.priority}</p>
-              <p className="text-sm">Status: {task.status}</p>
-
-              <button onClick={() => {
-                setEditingTaskId(task._id);
-                setEditForm(task);
-              }}>
-                <Pencil size={18} className="text-blue-600 hover:text-blue-800" />
-              </button>
-              <button onClick={() => handleDelete(task._id)}>
-                <Trash2 size={18} className="text-red-600 hover:text-red-800" />
-              </button> */}
-
-              {editingTaskId === task._id ? (
-                <form onSubmit={(e) => handleEditSubmit(e, task._id)} className="space-y-2">
-                  <input name="title" value={editForm.title} onChange={handleEditChange} className="w-full border px-2 py-1 rounded" />
-                  <textarea name="description" value={editForm.description} onChange={handleEditChange} className="w-full border px-2 py-1 rounded" />
-                  <input type="date" name="dueDate" value={editForm.dueDate?.split('T')[0]} onChange={handleEditChange} className="w-full border px-2 py-1 rounded" />
-                  <select name="priority" value={editForm.priority} onChange={handleEditChange} className="w-full border px-2 py-1 rounded">
-                    <option>Low</option><option>Medium</option><option>High</option>
-                  </select>
-                  <select name="status" value={editForm.status} onChange={handleEditChange} className="w-full border px-2 py-1 rounded">
-                    <option>Todo</option><option>In Progress</option><option>Completed</option>
-                  </select>
-                  <div className="flex gap-2">
-                    <button type="submit" className="bg-green-600 text-white px-3 py-1 rounded">Save</button>
-                    <button type="button" className="bg-gray-400 text-white px-3 py-1 rounded" onClick={() => setEditingTaskId(null)}>Cancel</button>
-                  </div>
-                </form>
-              ) : (
-                <>
-                  <h3 className="text-lg font-semibold">{task.title}</h3>
-                  <p>{task.description}</p>
-                  <p className="text-sm text-gray-600">Due: {task.dueDate?.split('T')[0]}</p>
-                  <p className="text-sm">Priority: {task.priority}</p>
-                  <p className="text-sm">Status: {task.status}</p>
-
-                  <div className="flex gap-2">
-                    <button onClick={() => {
-                      setEditingTaskId(task._id);
-                      setEditForm(task);
-                    }}>
-                      <Pencil size={18} className="text-blue-600 hover:text-blue-800" />
-                    </button>
-                    <button onClick={() => handleDelete(task._id)}>
-                      <Trash2 size={18} className="text-red-600 hover:text-red-800" />
-                    </button>
-                  </div>
-                </>
-              )}
-
-            </div>
-          ))}
-        </div>
-        <div>
-          <h2 className="text-xl font-bold mb-4">overdue tasks</h2>
-          {overdueTasks.map((task: any) => (
-            <div key={task._id} className="bg-white p-4 rounded shadow mb-3">
-              <h3 className="text-lg font-semibold">{task.title}</h3>
-              <p>{task.description}</p>
-              <p className="text-sm text-gray-600">Due: {task.dueDate?.split('T')[0]}</p>
-              <p className="text-sm">Priority: {task.priority}</p>
-              <p className="text-sm">Status: {task.status}</p>
-            </div>
-          ))}
-        </div>
-
+    <div className="flex flex-col h-screen">
+      
+      {/* Top Navbar with Logout */}
+      <div className="flex justify-between items-center px-6 py-4 bg-white shadow border-b">
+        <h1 className="text-2xl font-bold text-blue-700">Dashboard</h1>
+        <button
+          onClick={handleLogout}
+          className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition"
+        >
+          Logout
+        </button>
       </div>
 
-      {/* Task Creation Panel */}
-      <div className="w-1/2 p-6 bg-white border-l border-gray-200 text-gray-700">
-        <h2 className="text-xl font-bold mb-4">Create New Task</h2>
-        <form onSubmit={handleCreateTask} className="space-y-4">
-          <input
-            type="text"
-            name="title"
-            placeholder="Title"
-            value={form.title}
-            onChange={handleChange}
-            className="w-full border px-3 py-2 rounded"
-            required
-          />
-          <textarea
-            name="description"
-            placeholder="Description"
-            value={form.description}
-            onChange={handleChange}
-            className="w-full border px-3 py-2 rounded"
-            required
-          />
-          <input
-            type="date"
-            name="dueDate"
-            value={form.dueDate}
-            onChange={handleChange}
-            className="w-full border px-3 py-2 rounded"
-            required
-          />
-          <select name="priority" value={form.priority} onChange={handleChange} className="w-full border px-3 py-2 rounded">
-            <option>Low</option>
-            <option>Medium</option>
-            <option>High</option>
-          </select>
-          <select name="status" value={form.status} onChange={handleChange} className="w-full border px-3 py-2 rounded">
-            <option>Todo</option>
-            <option>In Progress</option>
-            <option>Completed</option>
-          </select>
-          <input
-            type="text"
-            name="assignedTo"
-            placeholder="Assign to (user email)"
-            value={form.assignedTo}
-            onChange={handleChange}
-            className="w-full border px-3 py-2 rounded"
-          />
-          <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-            Create Task
-          </button>
-        </form>
+      <div className="flex flex-1 overflow-hidden">
+        {/* Task List Panel */}
+        <div className="w-1/2 p-6 bg-gray-50 overflow-y-auto text-gray-700">
+
+          {/* Filter/Search Bar */}
+          <div className="mb-4 space-y-2">
+            <input
+              type="text"
+              placeholder="Search by title or description"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full border px-3 py-2 rounded"
+            />
+            <div className="flex flex-wrap gap-2">
+              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="border px-2 py-1 rounded">
+                <option value="">All Status</option>
+                <option>Todo</option>
+                <option>In Progress</option>
+                <option>Completed</option>
+              </select>
+
+              <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} className="border px-2 py-1 rounded">
+                <option value="">All Priority</option>
+                <option>Low</option>
+                <option>Medium</option>
+                <option>High</option>
+              </select>
+
+              <input
+                type="date"
+                value={filterDueDate}
+                onChange={(e) => setFilterDueDate(e.target.value)}
+                className="border px-2 py-1 rounded"
+              />
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-xl font-bold mb-4">assigned tasks</h2>
+            {filteredAssigned.map((task: any) => (
+              <TaskCard
+                key={task._id}
+                task={task}
+                editingTaskId={editingTaskId}
+                editForm={editForm}
+                setEditForm={setEditForm}
+                setEditingTaskId={setEditingTaskId}
+                handleEditChange={handleEditChange}
+                handleEditSubmit={handleEditSubmit}
+                handleDelete={handleDelete}
+              />
+            ))}
+          </div>
+          <div>
+            <h2 className="text-xl font-bold mb-4">created tasks</h2>
+            {filteredCreated.map((task: any) => (
+              <TaskCard
+                key={task._id}
+                task={task}
+                editingTaskId={editingTaskId}
+                editForm={editForm}
+                setEditForm={setEditForm}
+                setEditingTaskId={setEditingTaskId}
+                handleEditChange={handleEditChange}
+                handleEditSubmit={handleEditSubmit}
+                handleDelete={handleDelete}
+              />
+            ))}
+          </div>
+          <div>
+            <h2 className="text-xl font-bold mb-4">overdue tasks</h2>
+            {filteredOverdue.map((task: any) => (
+              <TaskCard
+                key={task._id}
+                task={task}
+                editingTaskId={editingTaskId}
+                editForm={editForm}
+                setEditForm={setEditForm}
+                setEditingTaskId={setEditingTaskId}
+                handleEditChange={handleEditChange}
+                handleEditSubmit={handleEditSubmit}
+                handleDelete={handleDelete}
+              />
+            ))}
+          </div>
+
+        </div>
+
+        {/* Task Creation Panel */}
+        <motion.div
+          initial={{ opacity: 0, x: 100 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="w-full md:w-1/2 p-6 bg-gradient-to-br from-white via-blue-50 to-purple-100 border-l border-gray-200 text-gray-800 shadow-xl"
+        >
+          <h2 className="text-2xl font-extrabold mb-6 text-blue-700 tracking-wide">Create New Task</h2>
+
+          <form onSubmit={handleCreateTask} className="space-y-5">
+            <input
+              type="text"
+              name="title"
+              placeholder="Title"
+              value={form.title}
+              onChange={handleChange}
+              className="w-full border border-gray-300 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+              required
+            />
+            <textarea
+              name="description"
+              placeholder="Description"
+              value={form.description}
+              onChange={handleChange}
+              className="w-full border border-gray-300 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition"
+              required
+            />
+            <input
+              type="date"
+              name="dueDate"
+              value={form.dueDate}
+              onChange={handleChange}
+              className="w-full border border-gray-300 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition"
+              required
+            />
+            <select
+              name="priority"
+              value={form.priority}
+              onChange={handleChange}
+              className="w-full border border-gray-300 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-400 transition"
+            >
+              <option>Low</option>
+              <option>Medium</option>
+              <option>High</option>
+            </select>
+            <select
+              name="status"
+              value={form.status}
+              onChange={handleChange}
+              className="w-full border border-gray-300 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+            >
+              <option>Todo</option>
+              <option>In Progress</option>
+              <option>Completed</option>
+            </select>
+            <input
+              type="text"
+              name="assignedTo"
+              placeholder="Assign to (user email)"
+              value={form.assignedTo}
+              onChange={handleChange}
+              className="w-full border border-gray-300 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 transition"
+            />
+
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              type="submit"
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition"
+            >
+              Create Task
+            </motion.button>
+          </form>
+        </motion.div>
       </div>
     </div>
   );
-
-  // return (
-  //   <div className="p-6">
-  //     <h1 className="text-2xl font-bold mb-4">Dashboard</h1>
-
-  //     <section className="mb-8">
-  //       <h2 className="text-lg font-semibold">Assigned to You</h2>
-  //       <ul className="list-disc ml-5">
-  //         {assignedTasks.map((task: any) => (
-  //           <li key={task._id}>{task.title}</li>
-  //         ))}
-  //       </ul>
-  //     </section>
-
-  //     <section className="mb-8">
-  //       <h2 className="text-lg font-semibold">Created by You</h2>
-  //       <ul className="list-disc ml-5">
-  //         {createdTasks.map((task: any) => (
-  //           <li key={task._id}>{task.title}</li>
-  //         ))}
-  //       </ul>
-  //     </section>
-
-  //     <section>
-  //       <h2 className="text-lg font-semibold text-red-600">Overdue Tasks</h2>
-  //       <ul className="list-disc ml-5">
-  //         {overdueTasks.map((task: any) => (
-  //           <li key={task._id}>{task.title}</li>
-  //         ))}
-  //       </ul>
-  //     </section>
-
-  //     <button
-  //       onClick={handleLogout}
-  //       className="bg-red-500 hover:bg-red-600 px-4 py-2 rounded text-sm"
-  //     >
-  //       Logout
-  //     </button>
-  //   </div>
-  // );
 }

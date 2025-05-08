@@ -2,26 +2,27 @@
 import { Pencil, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import React from "react";
+import { TaskCardProps } from "../dashboard/page";
 
-type Task = {
-  _id: string;
-  title: string;
-  description: string;
-  dueDate: string;
-  priority: string;
-  status: string;
-};
+// type Task = {
+//   _id: string;
+//   title: string;
+//   description: string;
+//   dueDate: string;
+//   priority: string;
+//   status: string;
+// };
 
-type Props = {
-  task: Task;
-  editingTaskId: string | null;
-  editForm: Partial<Task>;
-  setEditForm: React.Dispatch<React.SetStateAction<Partial<Task>>>;
-  setEditingTaskId: (id: string | null) => void;
-  handleEditChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
-  handleEditSubmit: (e: React.FormEvent, id: string) => void;
-  handleDelete: (id: string) => void;
-};
+// type Props = {
+//   task: Task;
+//   editingTaskId: string | null;
+//   editForm: Partial<Task>;
+//   setEditForm: React.Dispatch<React.SetStateAction<Partial<Task>>>;
+//   setEditingTaskId: (id: string | null) => void;
+//   handleEditChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
+//   handleEditSubmit: (e: React.FormEvent, id: string) => void;
+//   handleDelete: (id: string) => void;
+// };
 
 const priorityColor = {
   Low: "bg-green-100 text-green-700",
@@ -35,7 +36,7 @@ const statusColor = {
   "Completed": "bg-emerald-100 text-emerald-700",
 };
 
-const TaskCard: React.FC<Props> = ({
+const TaskCard: React.FC<TaskCardProps> = ({
   task,
   editingTaskId,
   editForm,
@@ -187,7 +188,15 @@ const TaskCard: React.FC<Props> = ({
                 <button
                   onClick={() => {
                     setEditingTaskId(task._id);
-                    setEditForm(task);
+                    setEditForm({
+                      title: task.title,
+                      description: task.description,
+                      dueDate: task.dueDate,
+                      priority: task.priority,
+                      status: task.status,
+                      assignedTo: task.assignedTo,
+                    });
+                    
                   }}
                   className="hover:scale-110 transition-transform"
                 >

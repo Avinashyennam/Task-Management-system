@@ -7,6 +7,7 @@ import Link from 'next/link';
 export default function SignupPage() {
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const router = useRouter();
+  const apiurl = process.env.BACKEND_URL;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -15,7 +16,7 @@ export default function SignupPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const res = await fetch('http://localhost:5000/api/auth/register', {
+    const res = await fetch(`${apiurl}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),

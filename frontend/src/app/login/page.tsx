@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 export default function Login() {
   const [form, setForm] = useState({ email: '', password: '' });
   const router = useRouter();
+  const apiurl = process.env.BACKEND_URL;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -14,7 +15,7 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const res = await fetch('http://localhost:5000/api/auth/login', {
+    const res = await fetch(`${apiurl}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
@@ -58,13 +59,14 @@ export default function Login() {
         </button>
 
         <p className="text-center text-sm text-gray-600">
-        Don't have an account?{' '}
-        <Link href="/signup" className="text-blue-600 hover:underline">
-          Sign up
-        </Link>
-      </p>
+          <p>Don&apos;t have an account?</p>
+
+          <Link href="/signup" className="text-blue-600 hover:underline">
+            Sign up
+          </Link>
+        </p>
       </form>
-      
+
     </div>
   );
 }

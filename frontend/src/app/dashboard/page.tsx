@@ -10,6 +10,28 @@ const getAuthHeaders = () => {
     Authorization: `Bearer ${token}`,
   };
 };
+import { Task } from '../../../types';
+export type TaskForm = {
+  title: string;
+  description: string;
+  dueDate: string;
+  priority: 'Low' | 'Medium' | 'High';
+  status: 'Todo' | 'In Progress' | 'Completed'; // or 'Completed' if you changed it
+  assignedTo: string;
+};
+
+
+export type TaskCardProps = {
+  task: Task;
+  editingTaskId: string | null;
+  editForm: TaskForm;
+  setEditForm: React.Dispatch<React.SetStateAction<TaskForm>>;
+  setEditingTaskId: React.Dispatch<React.SetStateAction<string | null>>;
+  handleEditChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
+  handleEditSubmit: (e: React.FormEvent, taskId: string) => void;
+  handleDelete: (taskId: string) => void;
+};
+
 
 export default function Dashboard() {
   const [assignedTasks, setAssignedTasks] = useState([]);
@@ -24,22 +46,29 @@ export default function Dashboard() {
     assignedTo: '',
   });
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<any>({});
+  const [editForm, setEditForm] = useState<TaskForm>({
+    title: '',
+    description: '',
+    dueDate: '',
+    priority: 'Low',
+    status: 'Todo',
+    assignedTo: '',
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterPriority, setFilterPriority] = useState('');
   const [filterDueDate, setFilterDueDate] = useState('');
+  const apiurl = process.env.BACKEND_URL;
 
   const router = useRouter();
 
   const fetchTasks = async () => {
     try {
       const headers = getAuthHeaders();
-
       const [assignedRes, createdRes, overdueRes] = await Promise.all([
-        fetch('http://localhost:5000/api/auth/assigned', { headers }),
-        fetch('http://localhost:5000/api/auth/created', { headers }),
-        fetch('http://localhost:5000/api/auth/overdue', { headers }),
+        fetch(`${apiurl}/api/auth/assigned`, { headers }),
+        fetch(`${apiurl}/api/auth/created`, { headers }),
+        fetch(`${apiurl}/api/auth/overdue`, { headers }),
       ]);
 
       const [assignedData, createdData, overdueData] = await Promise.all([
@@ -70,12 +99,12 @@ export default function Dashboard() {
     router.push('/login');
   };
 
-  const handleCreateTask = async (e: any) => {
+  const handleCreateTask = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     console.log(form);
     // return;
     try {
-      const res = await fetch('http://localhost:5000/api/tasks', {
+      const res = await fetch(`${apiurl}/api/tasks`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(form),
@@ -104,7 +133,7 @@ export default function Dashboard() {
     if (!confirmed) return;
 
     try {
-      const res = await fetch(`http://localhost:5000/api/tasks/${taskId}`, {
+      const res = await fetch(`${apiurl}/api/tasks/${taskId}`, {
         method: 'DELETE',
         headers: getAuthHeaders(),
       });
@@ -120,14 +149,14 @@ export default function Dashboard() {
     }
   };
 
-  const handleEditChange = (e: any) => {
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setEditForm({ ...editForm, [e.target.name]: e.target.value });
   };
 
-  const handleEditSubmit = async (e: any, taskId: string) => {
+  const handleEditSubmit = async (e: React.FormEvent, taskId: string) => {
     e.preventDefault();
     try {
-      const res = await fetch(`http://localhost:5000/api/tasks/${taskId}`, {
+      const res = await fetch(`${apiurl}/api/tasks/${taskId}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify(editForm),
@@ -145,11 +174,11 @@ export default function Dashboard() {
     }
   };
 
-  const handleChange = (e: any) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const filterTasks = (tasks: any[]) => {
+  const filterTasks = (tasks: Task[]) => {
     return tasks.filter(task => {
       const matchesSearch =
         task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -170,7 +199,7 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col h-screen">
-      
+
       {/* Top Navbar with Logout */}
       <div className="flex justify-between items-center px-6 py-4 bg-white shadow border-b">
         <h1 className="text-2xl font-bold text-blue-700">Dashboard</h1>
@@ -221,7 +250,7 @@ export default function Dashboard() {
 
           <div>
             <h2 className="text-xl font-bold mb-4">assigned tasks</h2>
-            {filteredAssigned.map((task: any) => (
+            {filteredAssigned.map((task: Task) => (
               <TaskCard
                 key={task._id}
                 task={task}
@@ -237,7 +266,7 @@ export default function Dashboard() {
           </div>
           <div>
             <h2 className="text-xl font-bold mb-4">created tasks</h2>
-            {filteredCreated.map((task: any) => (
+            {filteredCreated.map((task: Task) => (
               <TaskCard
                 key={task._id}
                 task={task}
@@ -253,7 +282,7 @@ export default function Dashboard() {
           </div>
           <div>
             <h2 className="text-xl font-bold mb-4">overdue tasks</h2>
-            {filteredOverdue.map((task: any) => (
+            {filteredOverdue.map((task: Task) => (
               <TaskCard
                 key={task._id}
                 task={task}

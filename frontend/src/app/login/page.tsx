@@ -7,7 +7,6 @@ export default function Login() {
   const [form, setForm] = useState({ email: '', password: '' });
   const router = useRouter();
   const apiurl = process.env.NEXT_PUBLIC_BACKEND_URL;
-  console.log("backend url", apiurl);
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };

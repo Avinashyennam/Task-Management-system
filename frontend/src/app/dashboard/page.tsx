@@ -58,7 +58,7 @@ export default function Dashboard() {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterPriority, setFilterPriority] = useState('');
   const [filterDueDate, setFilterDueDate] = useState('');
-  const apiurl = process.env.BACKEND_URL;
+  const apiurl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   const router = useRouter();
 

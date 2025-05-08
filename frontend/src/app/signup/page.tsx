@@ -7,7 +7,7 @@ import Link from 'next/link';
 export default function SignupPage() {
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const router = useRouter();
-  const apiurl = process.env.BACKEND_URL;
+  const apiurl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
